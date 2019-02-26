@@ -61,7 +61,7 @@ def set_up_directories(rootdir, classname):
     directories will be rootdir/train/classname and rootdir/valid/classname.
     Creates directories if they don't exist; 
     throws an error if classname directories exist and aren't empty."""
-    
+    # TODO: might be nice if train and valid weren't hard-coded
 
 
 def main(wnid,
