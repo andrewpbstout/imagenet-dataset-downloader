@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+# TODO: find the proper way to acknowledge that this is based on https://github.com/itf/imagenet-download
+
 import argparse
 import urllib.request, urllib.error, urllib.parse
 from socket import timeout as TimeoutError
@@ -11,6 +13,7 @@ import random
 
 WN_FULL_SUBTREE_WNIDS_URL = 'http://image-net.org/api/text/wordnet.structure.hyponym?full=1&wnid='
 WN_IMG_LIST_URL = 'http://www.image-net.org/api/text/imagenet.synset.geturls?wnid='
+WN_WNID_TO_WORD_URL = 'http://www.image-net.org/api/text/wordnet.synset.getwords?wnid='
 
 class DownloadError(Exception):
     """Base class for exceptions in this module."""
@@ -54,7 +57,13 @@ def get_url_request_list_function(request_url):
 get_full_subtree_wnid = get_url_request_list_function(WN_FULL_SUBTREE_WNIDS_URL)
 get_image_urls = get_url_request_list_function(WN_IMG_LIST_URL)
 
+def get_words_wnid(wnid, timeout=5, retry=3):
+    url = WN_WNID_TO_WORD_URL + wnid
+    response = download(url, timeout, retry).decode().strip()
+    return response
 
+
+# with new version of fastai, I don't need to split train/valid/test
 def set_up_directories(rootdir, classname):
     """rootdir is the root directory,
     classname is the wnid or human-readable name,
@@ -63,10 +72,19 @@ def set_up_directories(rootdir, classname):
     throws an error if classname directories exist and aren't empty."""
     # TODO: might be nice if train and valid weren't hard-coded
 
+def set_up_directory_simple(rootdir, classname):
+    """rootdir is the root directory,
+    classname is the wnid or human-readable name,
+    directory will be rootdir/classname
+    Creates directories if they don't exist; 
+    throws an error if classname directories exist and aren't empty."""
+
+
 
 def main(wnid,
         timeout,
-        retry):
+        retry,
+        human_readable):
     # get all subtree wnids
     # TODO: wrap this in a try/except with good error message
     subtree_wnids = get_full_subtree_wnid(wnid,timeout,retry)
@@ -75,19 +93,25 @@ def main(wnid,
     print("subtree_wnids: ", subtree_wnids)
     # get image url list for all wnids
     all_urls = []
-    for wnid in subtree_wnids:
+    for swnid in subtree_wnids:
         # TODO: wrap this in a try/except with a good error message
-        wnid_urls = get_image_urls(wnid, timeout, retry)
+        wnid_urls = get_image_urls(swnid, timeout, retry)
         all_urls += wnid_urls
     print(len(all_urls), "image urls retrieved. Randomizing...")
     # randomize in some way
-    # I have efficiency concerns about this, but increment random sampling without replacement
-    # is complicated
+    # I have efficiency concerns about this, 
+    # but incremental random sampling without replacement is complicated
     random.shuffle(all_urls)
     #print("all urls, suffled: ", all_urls)
     # compute number of images in training, validation, and testing
     # todo: multithread
     # check/set up directories
+    if human_readable:
+        dir_name = get_words_wnid(wnid, timeout, retry)
+    else:
+        dir_name = wnid
+    print("dir_name: ", dir_name)
+    #set_up_directory_simple(rootdir, classname)
     # for number of images in each:
         # get a url
         # attempt to download
@@ -106,11 +130,14 @@ if __name__ == '__main__':
                 help='Timeout per request in seconds')
     p.add_argument('--retry', '-r', type=int, default=3,
                 help='Max count of retry for each request')
+    p.add_argument('--humanreadable', '-H', action='store_true',
+                   help='Makes the folders human readable')
 
 
     args = p.parse_args()
     main(wnid = args.wnid,
         timeout = args.timeout,
-        retry = args.retry)
+        retry = args.retry,
+        human_readable = args.humanreadable)
 
 
