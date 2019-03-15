@@ -62,6 +62,11 @@ def get_words_wnid(wnid, timeout=5, retry=3):
     response = download(url, timeout, retry).decode().strip()
     return response
 
+def make_directory(path):
+    if not os.path.isdir(path):
+        os.makedirs(path)
+    # TODO: raise error if directory already exists and isn't empty
+
 
 # with new version of fastai, I don't need to split train/valid/test
 def set_up_directories(rootdir, classname):
@@ -78,7 +83,7 @@ def set_up_directory_simple(rootdir, classname):
     directory will be rootdir/classname
     Creates directories if they don't exist; 
     throws an error if classname directories exist and aren't empty."""
-
+    dir_path = os.path.join(rootdir, classname)
 
 
 def main(wnid,
