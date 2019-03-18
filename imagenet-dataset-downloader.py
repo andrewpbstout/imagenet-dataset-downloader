@@ -10,6 +10,9 @@ import time
 import http.client
 from ssl import CertificateError
 import random
+import os
+import imghdr
+import sys
 
 WN_FULL_SUBTREE_WNIDS_URL = 'http://image-net.org/api/text/wordnet.structure.hyponym?full=1&wnid='
 WN_IMG_LIST_URL = 'http://www.image-net.org/api/text/imagenet.synset.geturls?wnid='
@@ -84,12 +87,44 @@ def set_up_directory_simple(rootdir, classname):
     Creates directories if they don't exist; 
     throws an error if classname directories exist and aren't empty."""
     dir_path = os.path.join(rootdir, classname)
+    make_directory(dir_path)
+    return dir_path
 
+# this is written but not tested. ran out of time on Friday, pick up here on Monday
+def download_images(image_url_list, n_images, dir_path, min_size, timeout, retry):
+    image_count = 0
+    for url in image_url_list:
+        if(image_count >= n_images):
+            break
+        try:
+            image = download(url, timeout, retry)
+            try:
+                extension = imghdr.what('', image) #check if valid image
+                if extension == "jpeg":
+                    extension = "jpg"
+                if extension == None:
+                    raise DownloadError()
+            except:
+                raise DownloadError()
+            if (sys.getsizeof(image) > min_size):
+                image_name = "image_" + str(image_count) + '.' + extension;
+                image_path = os.path.join(dir_path, image_name)
+                image_file = open(image_path, 'wb')
+                image_file.write(image)
+                image_file.close()
+                image_count+=1
+                #time.sleep(sleep)
+                print(f"downloaded {url} as {image_path}")
+        except DownloadError as e:
+            print('Could not download '+url+" : ")
 
 def main(wnid,
+        out_dir,
+        nimages,
         timeout,
         retry,
-        human_readable):
+        human_readable,
+        min_size):
     # get all subtree wnids
     # TODO: wrap this in a try/except with good error message
     subtree_wnids = get_full_subtree_wnid(wnid,timeout,retry)
@@ -115,17 +150,15 @@ def main(wnid,
         dir_name = get_words_wnid(wnid, timeout, retry)
     else:
         dir_name = wnid
-    print("dir_name: ", dir_name)
-    #set_up_directory_simple(rootdir, classname)
-    # for number of images in each:
-        # get a url
-        # attempt to download
-        # check handle failures; retry or get another url if necessary
-        # write to correct directory
+    #print("dir_name: ", dir_name)
+    dir_path = set_up_directory_simple(out_dir, dir_name)
+    download_images(all_urls, nimages, dir_path, min_size, timeout, retry)
+    
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser()
     p.add_argument('wnid', help='Imagenet wnid, example n03489162')
+    p.add_argument('outdir', help='Output directory')
     p.add_argument('--nimages', '-n', type=int, default=20,
                 metavar='N_IMAGES',
                 help='Number of images per class to download')
@@ -137,12 +170,17 @@ if __name__ == '__main__':
                 help='Max count of retry for each request')
     p.add_argument('--humanreadable', '-H', action='store_true',
                    help='Makes the folders human readable')
+    p.add_argument('--minsize', '-m', type=float, default=7000,
+                   help='Min size of the images in bytes')
 
 
     args = p.parse_args()
     main(wnid = args.wnid,
+        out_dir = args.outdir,
+        nimages = args.nimages,
         timeout = args.timeout,
         retry = args.retry,
-        human_readable = args.humanreadable)
+        human_readable = args.humanreadable,
+        min_size = args.minsize)
 
 
