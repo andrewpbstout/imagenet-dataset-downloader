@@ -162,8 +162,8 @@ if __name__ == '__main__':
     p.add_argument('--nimages', '-n', type=int, default=20,
                 metavar='N_IMAGES',
                 help='Number of images per class to download')
-    p.add_argument('--valid', type=float, default=0.2,
-                help='Percentage of images in validation set')
+    #p.add_argument('--valid', type=float, default=0.2,
+    #            help='Percentage of images in validation set')
     p.add_argument('--timeout', '-t', type=float, default=15,
                 help='Timeout per request in seconds')
     p.add_argument('--retry', '-r', type=int, default=3,
